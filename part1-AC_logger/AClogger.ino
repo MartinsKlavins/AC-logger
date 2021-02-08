@@ -1,54 +1,38 @@
 /*
  * Martins Klavins 10/03/2018
- * =================================================================================================================================
- *            AC monitorings, kur uz Serial monitor izvada 'tekoshos' radijumus, bet SD karte ieraksta ik pec 30 sec
- * =================================================================================================================================
  * 
- * SD kartes modulis - CATALEX
- * SD kartes modula pieslegums pie SPI bus
+ * SD card - CATALEX
+ * SD card connection to Arduino SPI:
  * CS   -> 10
- * SCK  -> ICSP=SCLK vai 13
- * MOSI -> ICSP=MOSI vai 11
- * MISO -> ICSP=MISO vai 12 
- * VCC  -> VCC (5V, bet pats modulis ar AMS1117 3.3 pazemina spriegumu uz 3.3V)
+ * SCK  -> ICSP=SCLK or 13
+ * MOSI -> ICSP=MOSI or 11
+ * MISO -> ICSP=MISO or 12 
+ * VCC  -> 5V ( on SD module is placed AMS1117-3.3 )
  * GND  -> GND 
  * 
- * AC monitorings - https://learn.openenergymonitor.org/electricity-monitoring/ctac/how-to-build-an-arduino-energy-monitor
- * (Viss ir Copy&Paste, tur ir ari viss labi aprasktits)
- * Stravas sensors:
- * YHDC SCT013 100A:50mA      - tatad current output, lai parverstu sprieguma, zimantots "burden/slodze" rezistors 33Ohm
- *                            - izmantots analogais pins 0 = A0
- *                            - kalibracijas koeficents 60.6
- * Sprieguma sensors:
- * Pashtaisits.........       - izmantots analogais pins 1 = A1
- *                            - kalibracijas koeficents 164.06
- * 
- * PS:  *Projekts veidots ta, lai to varetu palaist no foldera. Vienkarsi atver ACloggers.ino
- *      *DATI.txt jaiekope sava SD. Atbalsta SD, SDHC kartes un FAT16, FAT32 failu sistemu.
- *      *SPI.h un SD.h tiek nemts no arduino standarta library
- *      *Laiks nav precizs, jo Emon.calc() patere laiku (merijumiem izmanto noteiktu pusperiodu skaitu?! + time-out).
- * 
+ * AC monitor - https://learn.openenergymonitor.org/electricity-monitoring/ctac/how-to-build-an-arduino-energy-monitor
+ 
+ * Current sensor:
+ * YHDC SCT013 100A:50mA      - current output, converted to voltage with "burden/load" resistor 33Ohm
+ *                            - pin A0
+ *                            - calibration coefficient 60.6
+ * Voltage sensor:
+ * DIY.........               - pins A1
+ *                            - calibration coefficient 164.06
  */
 
 
 
 #include <SPI.h>
 #include <SD.h>
-#include "EmonLib.h"             
+#include <EmonLib.h>             
 
 
 
-// Global variables
-// ----------------
-    // taimerim
+
     unsigned long previousMillis = 0, sekundes, minutes;
-    // AC vertibam
     float apparentPower, Vrms, Irms;
 
-
-// Constants
-// ---------
-    // taimerim
     unsigned long sekundes30 = 30000;
 
 
@@ -63,18 +47,18 @@ File DATALOGGER;
 // ------------------
 void SDkarte(){
   if (!SD.begin(10)){                                         // SD.begin(chip select pin) 
-    Serial.println("neatpazist SD karti");                    
+    Serial.println("SD card undetected");                    
     return;                                                  
     } 
-  Serial.println("Karte atpazita");
+  Serial.println("SD card detected");
   }
 
 
-// ieraskta SD karte
-// -----------------
+// write to SD card
+// ----------------
 void ierakstitSD(){
-  DATALOGGER = SD.open("dati.txt", FILE_WRITE);               // tikai vienu failu var atvert vienllaicigi, ja vajag citu, šis jāver ciet
-    if (DATALOGGER){                                          // ja fails atveras ok, ierakstam taja - if(true)
+  DATALOGGER = SD.open("dati.txt", FILE_WRITE);
+    if (DATALOGGER){
       DATALOGGER.print(minutes);
       DATALOGGER.print(":");
       DATALOGGER.print(sekundes);
@@ -84,10 +68,13 @@ void ierakstitSD(){
       DATALOGGER.print("\t A = ");
       DATALOGGER.println(Irms);
       DATALOGGER.close();
-    } else{                                                   // ja neatver failu
+    } else{
       Serial.println("error opening dati.txt");
     }
   }
+
+
+
 
 void setup()
 {  
@@ -117,9 +104,9 @@ void loop()
 
 
   
-  unsigned long laiks = millis();                             // taimerim izmanto millis()
+  unsigned long laiks = millis();
   
-  if (laiks > 999){                                           // ms sadalu pa minutem un sekundem
+  if (laiks > 999){
     sekundes = laiks / 1000;
     if (sekundes > 59){
       minutes = sekundes / 60;
@@ -130,10 +117,9 @@ void loop()
       }
     }
 
-  if (laiks - previousMillis >= sekundes30){                  // taimeris, kas ik pec 30sec ieraksta merijumus SD karte
+  if (laiks - previousMillis >= sekundes30){
     previousMillis = laiks;
     ierakstitSD();
   }
   
 }
-
